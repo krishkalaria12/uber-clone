@@ -6,6 +6,7 @@ npm-debug.*
 *.p8
 *.p12
 *.key
+*.env
 *.mobileprovision
 *.orig.*
 web-build/
@@ -18,3 +19,6 @@ web-build/
 
 expo-env.d.ts
 # @end expo-cli
+
+#env keys
+.env
