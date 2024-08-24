@@ -1,46 +1,38 @@
-import { Link } from "expo-router";
+import { useSignUp } from "@clerk/clerk-expo";
+import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Alert, Image, ScrollView, Text, View } from "react-native";
-import { useSignUp } from "@clerk/clerk-expo";
-import { useRouter } from "expo-router";
 import { ReactNativeModal } from "react-native-modal";
 
 import CustomButton from "@/components/CustomButton";
 import InputField from "@/components/InputField";
 import OAuth from "@/components/OAuth";
 import { icons, images } from "@/constants";
+import { fetchAPI } from "@/lib/fetch";
 
 const SignUp = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
-  const router = useRouter();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
   });
-
   const [verification, setVerification] = useState({
     state: "default",
-    code: "",
     error: "",
+    code: "",
   });
 
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-
   const onSignUpPress = async () => {
-    if (!isLoaded) {
-      return;
-    }
-
+    if (!isLoaded) return;
     try {
       await signUp.create({
         emailAddress: form.email,
         password: form.password,
       });
-
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-
       setVerification({
         ...verification,
         state: "pending",
@@ -48,48 +40,47 @@ const SignUp = () => {
     } catch (err: any) {
       // See https://clerk.com/docs/custom-flows/error-handling
       // for more info on error handling
-      console.error(JSON.stringify(err, null, 2));
+      console.log(JSON.stringify(err, null, 2));
       Alert.alert("Error", err.errors[0].longMessage);
     }
   };
-
   const onPressVerify = async () => {
-    if (!isLoaded) {
-      return;
-    }
-
+    if (!isLoaded) return;
     try {
       const completeSignUp = await signUp.attemptEmailAddressVerification({
         code: verification.code,
       });
-
       if (completeSignUp.status === "complete") {
+        await fetchAPI("/(api)/user", {
+          method: "POST",
+          body: JSON.stringify({
+            name: form.name,
+            email: form.email,
+            clerkId: completeSignUp.createdUserId,
+          }),
+        });
         await setActive({ session: completeSignUp.createdSessionId });
         setVerification({
           ...verification,
           state: "success",
         });
-        router.replace("/(root)/(tabs)/home");
       } else {
         setVerification({
           ...verification,
+          error: "Verification failed. Please try again.",
           state: "failed",
-          error: "Verification failed",
         });
-        console.error(JSON.stringify(completeSignUp, null, 2));
       }
     } catch (err: any) {
       // See https://clerk.com/docs/custom-flows/error-handling
       // for more info on error handling
-      console.error(JSON.stringify(err, null, 2));
       setVerification({
         ...verification,
-        state: "failed",
         error: err.errors[0].longMessage,
+        state: "failed",
       });
     }
   };
-
   return (
     <ScrollView className="flex-1 bg-white">
       <View className="flex-1 bg-white">
@@ -192,10 +183,7 @@ const SignUp = () => {
             </Text>
             <CustomButton
               title="Browse Home"
-              onPress={() => {
-                setShowSuccessModal(false);
-                router.push(`/(root)/(tabs)/home`);
-              }}
+              onPress={() => router.push(`/(root)/(tabs)/home`)}
               className="mt-5"
             />
           </View>
