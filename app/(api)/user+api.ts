@@ -18,7 +18,7 @@ export async function POST(request: Request) {
                                clerk_id)
             VALUES (${name},
                     ${email},
-                    ${clerkId});`;
+                    ${clerkId})`;
 
     return new Response(JSON.stringify({ data: response }), {
       status: 201,
